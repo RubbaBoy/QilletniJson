@@ -1,0 +1,6 @@
+name: json
+version: 1.0.0
+author: Adam Yarris
+native_classes:
+  - is.yarr.qilletni.lib.json.Json
+dependencies: []

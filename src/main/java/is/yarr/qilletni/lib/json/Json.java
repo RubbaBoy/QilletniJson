@@ -1,0 +1,72 @@
+package is.yarr.qilletni.lib.json;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import is.yarr.qilletni.api.lang.types.EntityType;
+import is.yarr.qilletni.api.lang.types.JavaType;
+import is.yarr.qilletni.api.lang.types.QilletniType;
+import is.yarr.qilletni.api.lang.types.StaticEntityType;
+import is.yarr.qilletni.api.lang.types.conversion.TypeConverter;
+import is.yarr.qilletni.api.lang.types.entity.EntityInitializer;
+import is.yarr.qilletni.api.lib.annotations.NativeOn;
+import is.yarr.qilletni.lib.json.adapters.BooleanTypeAdapterFactory;
+import is.yarr.qilletni.lib.json.adapters.DynamicTypeAdapterFactory;
+import is.yarr.qilletni.lib.json.adapters.EntityTypeAdapterFactory;
+import is.yarr.qilletni.lib.json.adapters.StringTypeAdapterFactory;
+import is.yarr.qilletni.lib.json.exceptions.UnserializableTypeException;
+
+import java.util.HashMap;
+
+public class Json {
+    
+    private final EntityInitializer entityInitializer;
+    private final TypeConverter typeConverter;
+
+    public Json(EntityInitializer entityInitializer, TypeConverter typeConverter) {
+        this.entityInitializer = entityInitializer;
+        this.typeConverter = typeConverter;
+    }
+    
+    private void registerTypeAdapters(GsonBuilder gson) {
+        gson.registerTypeAdapterFactory(new EntityTypeAdapterFactory(typeConverter, entityInitializer))
+                .registerTypeAdapterFactory(new StringTypeAdapterFactory(typeConverter))
+                .registerTypeAdapterFactory(new BooleanTypeAdapterFactory(typeConverter))
+                .registerTypeAdapterFactory(new DynamicTypeAdapterFactory(typeConverter));
+    }
+
+    @NativeOn("JsonConverter")
+    public QilletniType createJsonConverter(StaticEntityType staticJsonConverter, boolean prettyPrint) {
+        var gson = new GsonBuilder();
+        
+        registerTypeAdapters(gson);
+        
+        if (prettyPrint) {
+            gson.setPrettyPrinting();
+        }
+
+        return entityInitializer.initializeEntity("JsonConverter", gson.create(), prettyPrint);
+    }
+
+    @NativeOn("JsonConverter")
+    public String toJson(EntityType jsonConverter, QilletniType obj) {
+        var gson = jsonConverter.getEntityScope().<JavaType>lookup("_gson").getValue().getReference(Gson.class);
+        
+        if (obj instanceof EntityType entityType && entityType.getEntityDefinition().getTypeName().equals("Map")) {
+            return gson.toJson(obj);
+        }
+        
+        throw new UnserializableTypeException("Cannot serialize type %s".formatted(obj.typeName()));
+    }
+
+    @NativeOn("JsonConverter")
+    public QilletniType fromJson(EntityType jsonConverter, String json) {
+        var gson = jsonConverter.getEntityScope().<JavaType>lookup("_gson").getValue().getReference(Gson.class);
+
+        var mapContents = gson.fromJson(json, HashMap.class);
+        
+        var mapEntity = entityInitializer.initializeEntity("Map");
+        mapEntity.getEntityScope().<JavaType>lookup("_map").getValue().setReference(mapContents);
+        
+        return mapEntity;
+    }
+}
