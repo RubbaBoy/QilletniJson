@@ -1,7 +1,6 @@
 package is.yarr.qilletni.lib.json.adapters;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.TypeAdapter;
@@ -10,6 +9,8 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import is.yarr.qilletni.api.lang.types.BooleanType;
+import is.yarr.qilletni.api.lang.types.DoubleType;
+import is.yarr.qilletni.api.lang.types.IntType;
 import is.yarr.qilletni.api.lang.types.StringType;
 import is.yarr.qilletni.api.lang.types.conversion.TypeConverter;
 import org.slf4j.Logger;
@@ -80,7 +81,12 @@ public class DynamicTypeAdapterFactory implements TypeAdapterFactory {
                     } else if (primitive.isBoolean()) {
                         value = gson.getAdapter(BooleanType.class).fromJsonTree(element);
                     } else if (primitive.isNumber()) {
-                        value = primitive.getAsNumber();  // Use default number handling
+                        var number = primitive.getAsNumber();
+                        if (number instanceof Double || number instanceof Float) {
+                            value = gson.getAdapter(DoubleType.class).fromJsonTree(element);
+                        } else {
+                            value = gson.getAdapter(IntType.class).fromJsonTree(element);
+                        }
                     }
                 } else if (element.isJsonObject()) {
                     // Handle nested objects if needed

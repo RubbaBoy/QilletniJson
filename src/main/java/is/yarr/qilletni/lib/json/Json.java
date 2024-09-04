@@ -10,14 +10,20 @@ import is.yarr.qilletni.api.lang.types.conversion.TypeConverter;
 import is.yarr.qilletni.api.lang.types.entity.EntityInitializer;
 import is.yarr.qilletni.api.lib.annotations.NativeOn;
 import is.yarr.qilletni.lib.json.adapters.BooleanTypeAdapterFactory;
+import is.yarr.qilletni.lib.json.adapters.DoubleTypeAdapterFactory;
 import is.yarr.qilletni.lib.json.adapters.DynamicTypeAdapterFactory;
 import is.yarr.qilletni.lib.json.adapters.EntityTypeAdapterFactory;
+import is.yarr.qilletni.lib.json.adapters.IntegerTypeAdapterFactory;
 import is.yarr.qilletni.lib.json.adapters.StringTypeAdapterFactory;
 import is.yarr.qilletni.lib.json.exceptions.UnserializableTypeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 
 public class Json {
+    
+    private static final Logger LOGGER = LoggerFactory.getLogger(Json.class);
     
     private final EntityInitializer entityInitializer;
     private final TypeConverter typeConverter;
@@ -31,6 +37,8 @@ public class Json {
         gson.registerTypeAdapterFactory(new EntityTypeAdapterFactory(typeConverter, entityInitializer))
                 .registerTypeAdapterFactory(new StringTypeAdapterFactory(typeConverter))
                 .registerTypeAdapterFactory(new BooleanTypeAdapterFactory(typeConverter))
+                .registerTypeAdapterFactory(new IntegerTypeAdapterFactory(typeConverter))
+                .registerTypeAdapterFactory(new DoubleTypeAdapterFactory(typeConverter))
                 .registerTypeAdapterFactory(new DynamicTypeAdapterFactory(typeConverter));
     }
 
@@ -63,6 +71,8 @@ public class Json {
         var gson = jsonConverter.getEntityScope().<JavaType>lookup("_gson").getValue().getReference(Gson.class);
 
         var mapContents = gson.fromJson(json, HashMap.class);
+
+        LOGGER.debug("Deserialized map: {}", mapContents);
         
         var mapEntity = entityInitializer.initializeEntity("Map");
         mapEntity.getEntityScope().<JavaType>lookup("_map").getValue().setReference(mapContents);

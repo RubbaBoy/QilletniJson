@@ -26,33 +26,32 @@ public class StringTypeAdapterFactory implements TypeAdapterFactory {
 
     @Override
     public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> typeToken) {
-        if (typeToken.getRawType() == String.class || StringType.class.isAssignableFrom(typeToken.getRawType())) {
-            return new TypeAdapter<>() {
-                // Write both I guess
-                @Override
-                public void write(JsonWriter out, T value) throws IOException {
-                    if (value instanceof StringType stringType) {
-                        out.value(stringType.getValue());
-                    } else {
-                        out.value((String) value);
-                    }
-                }
-
-                // Read only to StringType
-                @Override
-                public T read(JsonReader in) throws IOException {
-                    if (in.peek() == JsonToken.NULL) {
-                        in.nextNull();
-                        return null;
-                    }
-
-                    return (T) typeConverter.convertToQilletniType(in.nextString());
-                }
-            };
+        if (typeToken.getRawType() != String.class && !StringType.class.isAssignableFrom(typeToken.getRawType())) {
+            return null; // Return null so Gson will use default behavior
         }
         
-        // For other types, return null so Gson will use default behavior
-        return null;
+        return new TypeAdapter<>() {
+            // Write both I guess
+            @Override
+            public void write(JsonWriter out, T value) throws IOException {
+                if (value instanceof StringType stringType) {
+                    out.value(stringType.getValue());
+                } else {
+                    out.value((String) value);
+                }
+            }
+
+            // Read only to StringType
+            @Override
+            public T read(JsonReader in) throws IOException {
+                if (in.peek() == JsonToken.NULL) {
+                    in.nextNull();
+                    return null;
+                }
+
+                return (T) typeConverter.convertToQilletniType(in.nextString());
+            }
+        };
     }
     
 }

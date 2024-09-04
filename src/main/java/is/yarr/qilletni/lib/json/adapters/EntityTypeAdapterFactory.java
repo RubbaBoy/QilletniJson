@@ -15,12 +15,16 @@ import is.yarr.qilletni.api.lang.types.StringType;
 import is.yarr.qilletni.api.lang.types.conversion.TypeConverter;
 import is.yarr.qilletni.api.lang.types.entity.EntityInitializer;
 import is.yarr.qilletni.lib.json.exceptions.UnserializableTypeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class EntityTypeAdapterFactory implements TypeAdapterFactory {
+    
+    private static final Logger LOGGER = LoggerFactory.getLogger(EntityTypeAdapterFactory.class);
     
     private final TypeConverter typeConverter;
     private final EntityInitializer entityInitializer;
@@ -48,11 +52,14 @@ public class EntityTypeAdapterFactory implements TypeAdapterFactory {
                         if (hashMap.keySet().stream().anyMatch(qilletniType -> !(qilletniType instanceof StringType))) {
                             throw new UnserializableTypeException("All keys in a map must be of type string");
                         }
+                        
+                        LOGGER.debug("Serializing map: {}", hashMap);
 
                         var newMap = new HashMap<String, QilletniType>();
                         hashMap.forEach((key, mapVal) -> newMap.put(((StringType) key).getValue(), mapVal));
 
                         JsonElement serialized = gson.toJsonTree(newMap);
+                        LOGGER.debug("Serialized map: {}", serialized);
                         out.jsonValue(serialized.toString());
                         return;
                     }
@@ -68,6 +75,8 @@ public class EntityTypeAdapterFactory implements TypeAdapterFactory {
 
                 var newMap = new HashMap<QilletniType, QilletniType>();
                 map.forEach((key, mapVal) -> newMap.put(typeConverter.convertToQilletniType(key), mapVal));
+                
+                LOGGER.debug("Created Map entity with contents: {}", newMap);
 
                 return (T) entityInitializer.initializeEntity("Map", newMap);
             }
