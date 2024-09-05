@@ -8,12 +8,14 @@ import is.yarr.qilletni.api.lang.types.QilletniType;
 import is.yarr.qilletni.api.lang.types.StaticEntityType;
 import is.yarr.qilletni.api.lang.types.conversion.TypeConverter;
 import is.yarr.qilletni.api.lang.types.entity.EntityInitializer;
+import is.yarr.qilletni.api.lang.types.list.ListInitializer;
 import is.yarr.qilletni.api.lib.annotations.NativeOn;
 import is.yarr.qilletni.lib.json.adapters.BooleanTypeAdapterFactory;
 import is.yarr.qilletni.lib.json.adapters.DoubleTypeAdapterFactory;
 import is.yarr.qilletni.lib.json.adapters.DynamicTypeAdapterFactory;
 import is.yarr.qilletni.lib.json.adapters.EntityTypeAdapterFactory;
 import is.yarr.qilletni.lib.json.adapters.IntegerTypeAdapterFactory;
+import is.yarr.qilletni.lib.json.adapters.ListTypeAdapterFactory;
 import is.yarr.qilletni.lib.json.adapters.StringTypeAdapterFactory;
 import is.yarr.qilletni.lib.json.exceptions.UnserializableTypeException;
 import org.slf4j.Logger;
@@ -27,15 +29,18 @@ public class Json {
     
     private final EntityInitializer entityInitializer;
     private final TypeConverter typeConverter;
+    private final ListInitializer listInitializer;
 
-    public Json(EntityInitializer entityInitializer, TypeConverter typeConverter) {
+    public Json(EntityInitializer entityInitializer, TypeConverter typeConverter, ListInitializer listInitializer) {
         this.entityInitializer = entityInitializer;
         this.typeConverter = typeConverter;
+        this.listInitializer = listInitializer;
     }
     
     private void registerTypeAdapters(GsonBuilder gson) {
         gson.registerTypeAdapterFactory(new EntityTypeAdapterFactory(typeConverter, entityInitializer))
                 .registerTypeAdapterFactory(new StringTypeAdapterFactory(typeConverter))
+                .registerTypeAdapterFactory(new ListTypeAdapterFactory(typeConverter, listInitializer))
                 .registerTypeAdapterFactory(new BooleanTypeAdapterFactory(typeConverter))
                 .registerTypeAdapterFactory(new IntegerTypeAdapterFactory(typeConverter))
                 .registerTypeAdapterFactory(new DoubleTypeAdapterFactory(typeConverter))

@@ -11,6 +11,7 @@ import com.google.gson.stream.JsonWriter;
 import is.yarr.qilletni.api.lang.types.BooleanType;
 import is.yarr.qilletni.api.lang.types.DoubleType;
 import is.yarr.qilletni.api.lang.types.IntType;
+import is.yarr.qilletni.api.lang.types.ListType;
 import is.yarr.qilletni.api.lang.types.StringType;
 import is.yarr.qilletni.api.lang.types.conversion.TypeConverter;
 import org.slf4j.Logger;
@@ -95,7 +96,7 @@ public class DynamicTypeAdapterFactory implements TypeAdapterFactory {
                 } else if (element.isJsonArray()) {
                     // Handle arrays if needed
                     // TODO: List
-                    value = gson.fromJson(element, Object[].class);
+                    value = gson.fromJson(element, ListType.class);
                 }
                 
                 map.put(key, value);
