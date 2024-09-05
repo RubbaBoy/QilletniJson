@@ -42,7 +42,6 @@ public class ListTypeAdapterFactory implements TypeAdapterFactory {
     @Override
     public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> typeToken) {
         var isArray = typeToken.getRawType().isArray();
-        System.out.println("isArray = " + isArray);
 
         if (!isArray && !ListType.class.isAssignableFrom(typeToken.getRawType())) {
             LOGGER.debug("Type {} and {} is not a ListType, returning null", typeToken.getRawType(), typeToken.getType());
@@ -57,13 +56,17 @@ public class ListTypeAdapterFactory implements TypeAdapterFactory {
             public void write(JsonWriter out, T value) throws IOException {
                 if (value instanceof ListType listType) {
                     out.beginArray();
-                    var subType = listType.getSubType();
-                    System.out.println("listType.getSubType(); = " + subType);
                     for (QilletniType item : listType.getItems()) {
-                        // TODO
+                        switch (item) {
+                            case StringType stringType -> out.value(stringType.getValue());
+                            case IntType intType -> out.value(intType.getValue());
+                            case DoubleType doubleType -> out.value(doubleType.getValue());
+                            case BooleanType booleanType -> out.value(booleanType.getValue());
+                            case ListType listType1 -> gson.getAdapter(ListType.class).write(out, listType1);
+                            default -> throw new IOException("Unsupported type in list: " + item.getClass());
+                        }
                     }
                     out.endArray();
-//                    out.value(stringType.getValue());
                 } else {
                     out.value((String) value);
                 }
@@ -80,7 +83,6 @@ public class ListTypeAdapterFactory implements TypeAdapterFactory {
                 in.beginArray();
 
                 var list = new ArrayList<QilletniType>();
-                QilletniTypeClass<?> commonType = null;
 
                 while (in.hasNext()) {
                     var token = in.peek();  // Peek at the next token to determine its type
@@ -97,67 +99,17 @@ public class ListTypeAdapterFactory implements TypeAdapterFactory {
                         }
                         case STRING -> gson.getAdapter(StringType.class).fromJsonTree(element);
                         case BOOLEAN -> gson.getAdapter(BooleanType.class).fromJsonTree(element);
-                        // TODO: Map, list, entities
+                        case BEGIN_ARRAY -> gson.getAdapter(ListType.class).fromJsonTree(element);
+                        // TODO: Map, entities(?)
                         default -> throw new IOException("Unsupported token in array: " + token);
                     };
 
-                    // Add value to the list
                     list.add(value);
-
-                    // Determine common type, promoting int to double if necessary
-                    if (value != null) {
-                        QilletniTypeClass<?> valueClass = null;
-                        var intentionalSwitch = false;
-
-                        if (value instanceof StringType) {
-                            valueClass = QilletniTypeClass.STRING;
-                        } else if (value instanceof BooleanType) {
-                            valueClass = QilletniTypeClass.BOOLEAN;
-                        } else if (value instanceof DoubleType) {
-                            LOGGER.debug("{} is double", value);
-                            if (commonType == QilletniTypeClass.INT) {
-                                LOGGER.debug("    promoting to double");
-                                valueClass = QilletniTypeClass.DOUBLE;  // Promote to double if needed
-                                intentionalSwitch = true;
-                            } else {
-                                LOGGER.debug("    setting double");
-                                valueClass = QilletniTypeClass.DOUBLE;
-                            }
-                        } else if (value instanceof IntType) {
-                            LOGGER.debug("{} is int", value);
-                            if (commonType == QilletniTypeClass.DOUBLE) {
-                                LOGGER.debug("    keeping double");
-                                valueClass = QilletniTypeClass.DOUBLE;
-                                // Keep commonType as Double (since integers can fit in doubles)
-                            } else {
-                                LOGGER.debug("    setting int");
-                                valueClass = QilletniTypeClass.INT;
-                            }
-                        }
-
-                        if (commonType == null) {
-                            commonType = valueClass;
-                        } else if (commonType != valueClass && !intentionalSwitch) {
-                            if (!commonType.getClass().isAssignableFrom(value.getClass())) {
-                                throw new MismatchedJsonArrayTypesException("Inconsistent types in array. Expected: " + commonType.getTypeName() + ", but got: " + valueClass.getTypeName());
-                            }
-                        }
-
-                        if (intentionalSwitch) {
-                            commonType = valueClass;
-                        }
-                    }
                 }
 
                 in.endArray();
 
-                LOGGER.debug("Common type for list: {}", commonType);
-
-                if (commonType == null) {
-                    return (T) listInitializer.createList(Collections.emptyList());
-                }
-
-                return (T) listInitializer.createList(list, commonType); // TODO: Return ListType
+                return (T) listInitializer.createList(list, QilletniTypeClass.ANY);
             }
         };
     }

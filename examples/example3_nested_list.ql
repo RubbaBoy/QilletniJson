@@ -1,7 +1,6 @@
 import "json:json.ql"
 
-//string jsonStr = "{\"a\": [\"one\", \"two\", \"three\", 5]}"
-string jsonStr = "{\"a\": [1, 2, 3.3, 4, 5]}"
+string jsonStr = "{\"a\": [1, 2, 3.3, 4, [\"a\", \"b\", \"c\"], 5]}"
 
 print("jsonStr = " + jsonStr)
 
@@ -15,7 +14,13 @@ for (var : map.get("a")) {
         print("var is int: " + var)    
     } else if (var is double) {
         print("var is double: " + var)
-    } else {
-        print("var is not int or double: " + var)
+    } else if (var is []) {
+        print("var is list: " + var)
     }
 }
+
+any[] someList = [1, 2, 3, ["a", "b", "c"], 5]
+Map jsonMap = new Map()
+jsonMap.put("a", someList)
+
+print(json.toJson(jsonMap))
