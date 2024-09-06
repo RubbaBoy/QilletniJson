@@ -8,8 +8,11 @@ import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import is.yarr.qilletni.api.lang.types.BooleanType;
 import is.yarr.qilletni.api.lang.types.EntityType;
+import is.yarr.qilletni.api.lang.types.IntType;
 import is.yarr.qilletni.api.lang.types.JavaType;
+import is.yarr.qilletni.api.lang.types.ListType;
 import is.yarr.qilletni.api.lang.types.QilletniType;
 import is.yarr.qilletni.api.lang.types.StringType;
 import is.yarr.qilletni.api.lang.types.conversion.TypeConverter;
@@ -21,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class EntityTypeAdapterFactory implements TypeAdapterFactory {
     
@@ -46,7 +50,7 @@ public class EntityTypeAdapterFactory implements TypeAdapterFactory {
                 if (value instanceof EntityType entityType) {
                     if (entityType.getEntityDefinition().getTypeName().equals("Map")) {
                         JavaType javaType = entityType.getEntityScope().<JavaType>lookup("_map").getValue();
-                        HashMap<QilletniType, QilletniType> hashMap = javaType.getReference(HashMap.class);
+                        HashMap<QilletniType, Object> hashMap = javaType.getReference(HashMap.class);
 
                         // Can't serialize maps that don't have a string as the key
                         if (hashMap.keySet().stream().anyMatch(qilletniType -> !(qilletniType instanceof StringType))) {
@@ -55,8 +59,30 @@ public class EntityTypeAdapterFactory implements TypeAdapterFactory {
                         
                         LOGGER.debug("Serializing map: {}", hashMap);
 
-                        var newMap = new HashMap<String, QilletniType>();
-                        hashMap.forEach((key, mapVal) -> newMap.put(((StringType) key).getValue(), mapVal));
+                        var newMap = new HashMap<String, Object>();
+                        hashMap.forEach((key, mapVal) -> {
+                            LOGGER.info("Key: {}, Value: {} ({})", key, mapVal, mapVal.getClass().getCanonicalName());
+                            
+//                            if (mapVal instanceof EntityType entityType1) {
+//                                
+//                            }
+                            
+                            var jsonElement = switch (mapVal) {
+                                case StringType stringType -> gson.getAdapter(StringType.class).toJson(stringType);
+                                case BooleanType booleanType -> gson.getAdapter(BooleanType.class).toJson(booleanType);
+                                case IntType intType -> gson.getAdapter(IntType.class).toJson(intType);
+                                case String s -> gson.toJsonTree(s);
+                                case Boolean b -> gson.toJsonTree(b);
+                                case Integer i -> gson.toJsonTree(i);
+                                case HashMap<?, ?> nestedMap -> gson.getAdapter(HashMap.class).toJsonTree(nestedMap);
+                                case ListType listType -> gson.getAdapter(ListType.class).toJson(listType);
+                                case null, default -> throw new RuntimeException("Cant serialize type: " + mapVal.getClass().getCanonicalName());
+                            };
+                            
+                            
+//                            gson.getAdapter(mapVal.getClass()).toJson(mapVal);
+                            newMap.put(((StringType) key).getValue(), jsonElement);
+                        });
 
                         JsonElement serialized = gson.toJsonTree(newMap);
                         LOGGER.debug("Serialized map: {}", serialized);

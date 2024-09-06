@@ -40,6 +40,7 @@ public class Json {
     private void registerTypeAdapters(GsonBuilder gson) {
         gson.registerTypeAdapterFactory(new EntityTypeAdapterFactory(typeConverter, entityInitializer))
                 .registerTypeAdapterFactory(new StringTypeAdapterFactory(typeConverter))
+//                .registerTypeAdapterFactory(new MapTypeAdapterFactory(typeConverter))
                 .registerTypeAdapterFactory(new ListTypeAdapterFactory(typeConverter, listInitializer))
                 .registerTypeAdapterFactory(new BooleanTypeAdapterFactory(typeConverter))
                 .registerTypeAdapterFactory(new IntegerTypeAdapterFactory(typeConverter))
@@ -65,6 +66,7 @@ public class Json {
         var gson = jsonConverter.getEntityScope().<JavaType>lookup("_gson").getValue().getReference(Gson.class);
         
         if (obj instanceof EntityType entityType && entityType.getEntityDefinition().getTypeName().equals("Map")) {
+            LOGGER.debug("Serializing map: {}", obj);
             return gson.toJson(obj);
         }
         

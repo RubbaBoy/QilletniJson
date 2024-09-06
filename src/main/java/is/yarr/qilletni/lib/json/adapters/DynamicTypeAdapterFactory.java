@@ -52,14 +52,23 @@ public class DynamicTypeAdapterFactory implements TypeAdapterFactory {
         public void write(JsonWriter out, Map<K, V> map) throws IOException {
             out.beginObject();
             for (Map.Entry<K, V> entry : map.entrySet()) {
-                out.name(entry.getKey().toString());
+                if (entry.getKey() instanceof StringType stringType) {
+                    out.name(stringType.getValue());
+                } else {
+                    out.name(entry.getKey().toString());
+                }
+                
                 Object value = entry.getValue();
                 switch (value) {
                     case StringType stringType -> gson.getAdapter(StringType.class).write(out, stringType);
                     case BooleanType booleanType -> gson.getAdapter(BooleanType.class).write(out, booleanType);
-                    case String s -> out.value(s);  // Use default String serialization
-                    case Boolean b -> out.value(b);  // Use default Boolean serialization
-                    case null, default -> gson.toJson(value, value.getClass(), out);  // Fallback for any other type
+                    case IntType intType -> gson.getAdapter(IntType.class).write(out, intType);
+                    case String s -> out.value(s);
+                    case Boolean b -> out.value(b);
+                    case Integer i -> out.value(i);
+                    case HashMap<?, ?> nestedMap -> gson.toJson(nestedMap, HashMap.class, out);  // Serialize nested maps
+                    case ListType listType -> gson.getAdapter(ListType.class).toJson(listType);
+                    default -> gson.toJson(value, value.getClass(), out);  // Fallback for any other type
                 }
             }
             out.endObject();
