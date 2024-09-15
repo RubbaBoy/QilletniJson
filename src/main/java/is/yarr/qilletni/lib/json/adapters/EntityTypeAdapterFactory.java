@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class EntityTypeAdapterFactory implements TypeAdapterFactory {
     
@@ -63,24 +62,18 @@ public class EntityTypeAdapterFactory implements TypeAdapterFactory {
                         hashMap.forEach((key, mapVal) -> {
                             LOGGER.info("Key: {}, Value: {} ({})", key, mapVal, mapVal.getClass().getCanonicalName());
                             
-//                            if (mapVal instanceof EntityType entityType1) {
-//                                
-//                            }
-                            
                             var jsonElement = switch (mapVal) {
-                                case StringType stringType -> gson.getAdapter(StringType.class).toJson(stringType);
-                                case BooleanType booleanType -> gson.getAdapter(BooleanType.class).toJson(booleanType);
-                                case IntType intType -> gson.getAdapter(IntType.class).toJson(intType);
+                                case StringType stringType -> gson.toJsonTree(stringType.getValue());
+                                case BooleanType booleanType -> gson.toJsonTree(booleanType.getValue());
+                                case IntType intType -> gson.toJsonTree(intType.getValue());
                                 case String s -> gson.toJsonTree(s);
                                 case Boolean b -> gson.toJsonTree(b);
                                 case Integer i -> gson.toJsonTree(i);
                                 case HashMap<?, ?> nestedMap -> gson.getAdapter(HashMap.class).toJsonTree(nestedMap);
-                                case ListType listType -> gson.getAdapter(ListType.class).toJson(listType);
+                                case ListType listType -> gson.getAdapter(ListType.class).toJsonTree(listType);
                                 case null, default -> throw new RuntimeException("Cant serialize type: " + mapVal.getClass().getCanonicalName());
                             };
                             
-                            
-//                            gson.getAdapter(mapVal.getClass()).toJson(mapVal);
                             newMap.put(((StringType) key).getValue(), jsonElement);
                         });
 

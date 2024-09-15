@@ -2,8 +2,11 @@ package is.yarr.qilletni.lib.json;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import is.yarr.qilletni.api.lang.types.EntityType;
 import is.yarr.qilletni.api.lang.types.JavaType;
+import is.yarr.qilletni.api.lang.types.ListType;
 import is.yarr.qilletni.api.lang.types.QilletniType;
 import is.yarr.qilletni.api.lang.types.StaticEntityType;
 import is.yarr.qilletni.api.lang.types.conversion.TypeConverter;
@@ -40,8 +43,7 @@ public class Json {
     private void registerTypeAdapters(GsonBuilder gson) {
         gson.registerTypeAdapterFactory(new EntityTypeAdapterFactory(typeConverter, entityInitializer))
                 .registerTypeAdapterFactory(new StringTypeAdapterFactory(typeConverter))
-//                .registerTypeAdapterFactory(new MapTypeAdapterFactory(typeConverter))
-                .registerTypeAdapterFactory(new ListTypeAdapterFactory(typeConverter, listInitializer))
+                .registerTypeAdapterFactory(new ListTypeAdapterFactory(listInitializer, entityInitializer))
                 .registerTypeAdapterFactory(new BooleanTypeAdapterFactory(typeConverter))
                 .registerTypeAdapterFactory(new IntegerTypeAdapterFactory(typeConverter))
                 .registerTypeAdapterFactory(new DoubleTypeAdapterFactory(typeConverter))
@@ -68,6 +70,9 @@ public class Json {
         if (obj instanceof EntityType entityType && entityType.getEntityDefinition().getTypeName().equals("Map")) {
             LOGGER.debug("Serializing map: {}", obj);
             return gson.toJson(obj);
+        }  else if (obj instanceof ListType listType) {
+            LOGGER.debug("Serializing list: {}", obj);
+            return gson.toJson(listType.getItems());
         }
         
         throw new UnserializableTypeException("Cannot serialize type %s".formatted(obj.typeName()));
@@ -77,13 +82,23 @@ public class Json {
     public QilletniType fromJson(EntityType jsonConverter, String json) {
         var gson = jsonConverter.getEntityScope().<JavaType>lookup("_gson").getValue().getReference(Gson.class);
 
-        var mapContents = gson.fromJson(json, HashMap.class);
+        JsonElement element = JsonParser.parseString(json);
 
-        LOGGER.debug("Deserialized map: {}", mapContents);
-        
-        var mapEntity = entityInitializer.initializeEntity("Map");
-        mapEntity.getEntityScope().<JavaType>lookup("_map").getValue().setReference(mapContents);
-        
-        return mapEntity;
+        if (element.isJsonArray()) {
+            LOGGER.debug("DESERIALIZING LIST!");
+            return gson.fromJson(json, ListType.class);
+        } else if (element.isJsonObject()) {
+            LOGGER.debug("DESERIALIZING MAP!");
+            var mapContents = gson.fromJson(json, HashMap.class);
+
+            LOGGER.debug("Deserialized map: {}", mapContents);
+
+            var mapEntity = entityInitializer.initializeEntity("Map");
+            mapEntity.getEntityScope().<JavaType>lookup("_map").getValue().setReference(mapContents);
+
+            return mapEntity;
+        } else {
+            throw new IllegalArgumentException("Unsupported JSON type");
+        }
     }
 }
